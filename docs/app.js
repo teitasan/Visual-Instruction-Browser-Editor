@@ -29,9 +29,11 @@ const elements = {
   sourceInput: document.getElementById('source-input'),
   sourceError: document.getElementById('source-error'),
   loadSource: document.getElementById('load-source'),
+  loadFile: document.getElementById('load-file'),
   loadSample: document.getElementById('load-sample'),
   copySource: document.getElementById('copy-source'),
   openSource: document.getElementById('open-source'),
+  fileInput: document.getElementById('file-input'),
   labels: document.getElementById('selection-labels'),
   targets: document.getElementById('selection-targets'),
   instructionInput: document.getElementById('instruction-input'),
@@ -388,6 +390,21 @@ elements.loadSource.addEventListener('click', () => {
 elements.loadSample.addEventListener('click', () => {
   elements.sourceInput.value = DEFAULT_HTML;
   handleLoadSource(DEFAULT_HTML);
+});
+
+elements.loadFile.addEventListener('click', () => {
+  elements.fileInput.click();
+});
+
+elements.fileInput.addEventListener('change', async (event) => {
+  const [file] = event.target.files ?? [];
+  if (!file) {
+    return;
+  }
+  const contents = await file.text();
+  elements.sourceInput.value = contents;
+  handleLoadSource(contents);
+  event.target.value = '';
 });
 
 elements.copySource.addEventListener('click', async () => {
