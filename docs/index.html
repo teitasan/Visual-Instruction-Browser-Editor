@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VIBE MVP Playground</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Visual Instruction Browser Editor (VIBE) MVP</h1>
+      <p>HTMLインポート → 選択 → 指示入力 → LLM生成 → Undo を動作確認できます。</p>
+    </header>
+
+    <main class="app-layout">
+      <section class="panel">
+        <h2>1. HTMLインポート</h2>
+        <textarea id="html-input" spellcheck="false"></textarea>
+        <div class="panel-actions">
+          <button id="load-html" type="button">iframeへ読み込み</button>
+        </div>
+
+        <h2>2. 指示入力</h2>
+        <div class="command-bar">
+          <input id="instruction-input" placeholder="指示を入力" />
+          <button id="generate" type="button">生成</button>
+          <button id="undo" type="button">Undo</button>
+        </div>
+
+        <h2>状態</h2>
+        <div class="status">
+          <div>選択中ID: <span id="selected-ids">なし</span></div>
+          <div>履歴: <span id="history-count">0</span> 件</div>
+        </div>
+
+        <h2>LLM入出力ログ</h2>
+        <pre id="payload-log"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>プレビュー（iframe）</h2>
+        <iframe id="preview" title="VIBE Preview"></iframe>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
