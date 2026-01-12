@@ -16,6 +16,10 @@ src/
   app-state.ts           # 状態管理（HTML、選択、履歴）
   iframe-interaction.ts  # iframeとpostMessage連携
   command-bar.tsx        # 指示入力UI
+docs/
+  index.html             # GitHub Pages用のデモUI
+  style.css              # デモUIのスタイル
+  app.js                 # デモの状態管理と簡易LLMシミュレーション
 ```
 
 ## postMessage通信スキーマ
@@ -76,3 +80,8 @@ LLM出力を適用する前に必ずサニタイズを行います。
 ## Undo仕様
 - LLM適用前のHTMLスナップショットを履歴に積み、Undo時に1ステップ戻す。
 - 連続Undoを許可し、履歴が空の場合は無操作とする。
+
+## GitHub Pagesデプロイ
+- GitHub Pagesは `docs/` ディレクトリをそのまま配信します。
+- `.github/workflows/pages.yml` を追加済みのため、`main` ブランチにpushすると自動でデプロイされます。
+- デモUIではHTMLインポート、選択、指示入力、LLM生成（簡易シミュレーション）、Undoの一連フローを確認できます。
