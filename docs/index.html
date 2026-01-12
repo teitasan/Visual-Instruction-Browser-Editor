@@ -3,45 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VIBE MVP Playground</title>
+    <title>VIBE Immersive MVP</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <header class="app-header">
-      <h1>Visual Instruction Browser Editor (VIBE) MVP</h1>
-      <p>HTMLインポート → 選択 → 指示入力 → LLM生成 → Undo を動作確認できます。</p>
-    </header>
+    <div id="preview-root">
+      <iframe id="preview" title="VIBE Preview"></iframe>
+    </div>
 
-    <main class="app-layout">
-      <section class="panel">
-        <h2>1. HTMLインポート</h2>
-        <textarea id="html-input" spellcheck="false"></textarea>
-        <div class="panel-actions">
-          <button id="load-html" type="button">iframeへ読み込み</button>
+    <div id="loading-overlay" class="overlay hidden" aria-live="polite">
+      <div class="spinner"></div>
+      <span>LLM処理中...</span>
+    </div>
+
+    <div id="source-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-card">
+        <header>
+          <h2>HTMLソース</h2>
+          <p>最低限のHTML構造（&lt;html&gt;など）を含むソースを入力してください。</p>
+        </header>
+        <textarea id="source-input" spellcheck="false"></textarea>
+        <div class="modal-actions">
+          <button id="load-source" type="button">読み込み</button>
+          <button id="load-sample" type="button" class="secondary">サンプル</button>
+          <button id="copy-source" type="button" class="ghost">コピー</button>
         </div>
+        <p id="source-error" class="error"></p>
+      </div>
+    </div>
 
-        <h2>2. 指示入力</h2>
-        <div class="command-bar">
-          <input id="instruction-input" placeholder="指示を入力" />
-          <button id="generate" type="button">生成</button>
-          <button id="undo" type="button">Undo</button>
-        </div>
-
-        <h2>状態</h2>
-        <div class="status">
-          <div>選択中ID: <span id="selected-ids">なし</span></div>
-          <div>履歴: <span id="history-count">0</span> 件</div>
-        </div>
-
-        <h2>LLM入出力ログ</h2>
-        <pre id="payload-log"></pre>
-      </section>
-
-      <section class="panel">
-        <h2>プレビュー（iframe）</h2>
-        <iframe id="preview" title="VIBE Preview"></iframe>
-      </section>
-    </main>
+    <div id="command-bar" class="command-bar" aria-live="polite">
+      <div class="command-status">
+        <div class="labels" id="selection-labels">要素を選択してください</div>
+        <div class="targets" id="selection-targets"></div>
+      </div>
+      <textarea
+        id="instruction-input"
+        placeholder="指示を入力（Enterで実行）"
+        disabled
+      ></textarea>
+      <div class="command-actions">
+        <button id="run-instruction" type="button" disabled>実行</button>
+        <button id="undo" type="button" disabled class="secondary">Undo</button>
+        <button id="open-source" type="button" class="ghost">ソース</button>
+      </div>
+    </div>
 
     <script src="./app.js"></script>
   </body>

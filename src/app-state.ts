@@ -1,24 +1,32 @@
 // Application state container for VIBE MVP.
 
-export type VibeditorNodeId = string;
+export type VibeditorLabel = string;
 
-export interface CommandHistoryEntry {
-  timestamp: number;
-  userInstruction: string;
-  beforeHtml: string;
-  afterHtml: string;
+export interface SelectionTarget {
+  label: VibeditorLabel;
+  tagName?: string;
+  outerHTML: string;
+}
+
+export interface SelectionInfo {
+  type: 'single' | 'multi';
+  targets: SelectionTarget[];
 }
 
 export interface AppState {
-  sourceFullHtml: string;
-  targetOuterHtmls: string[];
-  selectionIds: VibeditorNodeId[];
-  commandHistory: CommandHistoryEntry[];
+  currentSource: string;
+  isProcessing: boolean;
+  history: string[];
+  selectionMode: 'click';
+  selection: SelectionInfo | null;
+  lastInstruction?: string;
 }
 
 export const createInitialState = (): AppState => ({
-  sourceFullHtml: '',
-  targetOuterHtmls: [],
-  selectionIds: [],
-  commandHistory: [],
+  currentSource: '',
+  isProcessing: false,
+  history: [],
+  selectionMode: 'click',
+  selection: null,
+  lastInstruction: undefined,
 });

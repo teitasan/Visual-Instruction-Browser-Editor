@@ -2,7 +2,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>サンプル</title>
+    <title>VIBE サンプル</title>
     <style>
       body { font-family: sans-serif; padding: 16px; }
       .card { border: 1px solid #ddd; padding: 12px; border-radius: 8px; }
@@ -13,43 +13,88 @@ const DEFAULT_HTML = `<!DOCTYPE html>
     <h1>VIBE サンプル</h1>
     <div class="card">
       <p>このテキストを選択して指示を出してください。</p>
+      <ul>
+        <li>箇条書き1</li>
+        <li>箇条書き2</li>
+      </ul>
       <a class="cta" href="https://example.com">購入する</a>
     </div>
   </body>
 </html>`;
 
 const elements = {
-  htmlInput: document.getElementById('html-input'),
-  loadButton: document.getElementById('load-html'),
   iframe: document.getElementById('preview'),
+  overlay: document.getElementById('loading-overlay'),
+  modal: document.getElementById('source-modal'),
+  sourceInput: document.getElementById('source-input'),
+  sourceError: document.getElementById('source-error'),
+  loadSource: document.getElementById('load-source'),
+  loadSample: document.getElementById('load-sample'),
+  copySource: document.getElementById('copy-source'),
+  openSource: document.getElementById('open-source'),
+  labels: document.getElementById('selection-labels'),
+  targets: document.getElementById('selection-targets'),
   instructionInput: document.getElementById('instruction-input'),
-  generateButton: document.getElementById('generate'),
-  undoButton: document.getElementById('undo'),
-  selectedIds: document.getElementById('selected-ids'),
-  historyCount: document.getElementById('history-count'),
-  payloadLog: document.getElementById('payload-log'),
+  runInstruction: document.getElementById('run-instruction'),
+  undo: document.getElementById('undo'),
 };
 
 const state = {
-  sourceFullHtml: DEFAULT_HTML,
-  targetOuterHtmls: [],
-  selectedIds: [],
-  commandHistory: [],
+  currentSource: '',
+  isProcessing: false,
+  history: [],
+  selection: null,
+  lastInstruction: '',
 };
 
-const VIBE_POST_MESSAGE_TYPE = 'vibe-editor';
+const VIBE_MESSAGE_TYPE = 'selected';
+const VIBE_INJECTED_ATTR = 'data-vibe-injected';
+const VIBE_BADGE_ATTR = 'data-vibe-badge';
 
-const INDEX_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const htmlIncludesRoot = (value) => {
+  return /<html[\s>]/i.test(value) && /<body[\s>]/i.test(value);
+};
 
-const indexToLabel = (index) => {
-  let value = index + 1;
-  let label = '';
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = INDEX_ALPHABET[remainder] + label;
-    value = Math.floor((value - 1) / 26);
+const setProcessing = (next) => {
+  state.isProcessing = next;
+  elements.overlay.classList.toggle('hidden', !next);
+  elements.instructionInput.disabled = next || !state.selection;
+  elements.runInstruction.disabled = next || !state.selection;
+  elements.undo.disabled = next || state.history.length === 0;
+};
+
+const updateCommandBar = () => {
+  if (!state.selection || state.selection.targets.length === 0) {
+    elements.labels.textContent = '要素を選択してください';
+    elements.targets.textContent = '';
+    elements.instructionInput.disabled = true;
+    elements.runInstruction.disabled = true;
+  } else {
+    const labels = state.selection.targets.map((target) => target.label).join(', ');
+    const summaries = state.selection.targets
+      .map((target) => `${target.label}: <${target.tagName ?? 'div'}>`)
+      .join(' · ');
+    elements.labels.textContent = `選択中: ${labels}`;
+    elements.targets.textContent = summaries;
+    elements.instructionInput.disabled = state.isProcessing;
+    elements.runInstruction.disabled = state.isProcessing;
   }
-  return label;
+  elements.undo.disabled = state.isProcessing || state.history.length === 0;
+};
+
+const updateIframe = (html) => {
+  elements.iframe.srcdoc = buildIframeHtml(html);
+};
+
+const openModal = () => {
+  elements.modal.classList.remove('hidden');
+  elements.sourceInput.value = state.currentSource;
+  elements.sourceError.textContent = '';
+};
+
+const closeModal = () => {
+  elements.modal.classList.add('hidden');
+  elements.sourceError.textContent = '';
 };
 
 const removeDangerousUrl = (value) => {
@@ -79,8 +124,12 @@ const sanitizeDocument = (doc) => {
       if (attr.name === 'data-vibeditor-id') {
         node.removeAttribute(attr.name);
       }
+      if (attr.name === VIBE_BADGE_ATTR) {
+        node.removeAttribute(attr.name);
+      }
     });
   });
+  doc.querySelectorAll(`[${VIBE_BADGE_ATTR}]`).forEach((node) => node.remove());
 };
 
 const sanitizeHtml = (html) => {
@@ -90,174 +139,282 @@ const sanitizeHtml = (html) => {
   return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
 
-const applyVibeIds = (doc) => {
-  const allElements = [...doc.body.querySelectorAll('*')].filter((node) => {
-    return !['SCRIPT', 'STYLE', 'LINK', 'META', 'TITLE'].includes(node.tagName);
-  });
-  allElements.forEach((node, index) => {
-    node.setAttribute('data-vibeditor-id', indexToLabel(index));
-  });
-  return allElements;
+const extractSourceWithLabels = () => {
+  const doc = elements.iframe.contentDocument;
+  if (!doc) {
+    return state.currentSource;
+  }
+  const clone = doc.documentElement.cloneNode(true);
+  clone.querySelectorAll(`[${VIBE_INJECTED_ATTR}]`).forEach((node) => node.remove());
+  clone.querySelectorAll(`[${VIBE_BADGE_ATTR}]`).forEach((node) => node.remove());
+  return `<!DOCTYPE html>\n${clone.outerHTML}`;
 };
 
 const buildIframeHtml = (html) => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
-  const labelled = applyVibeIds(doc);
 
   const styleTag = doc.createElement('style');
+  styleTag.setAttribute(VIBE_INJECTED_ATTR, 'true');
   styleTag.textContent = `
-    [data-vibeditor-id].vibe-selected { outline: 2px solid #f97316; outline-offset: 2px; }
-    [data-vibeditor-id] { cursor: pointer; }
+    [data-vibeditor-id] { outline: 2px solid transparent; outline-offset: 3px; position: relative; }
+    [data-vibeditor-id].vibe-hover { outline-color: rgba(59, 130, 246, 0.65); }
+    [data-vibeditor-id].vibe-selected { outline-color: rgba(248, 113, 113, 0.9); }
+    .vibe-badge {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      background: rgba(248, 113, 113, 0.95);
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.3);
+      pointer-events: none;
+    }
   `;
   doc.head.appendChild(styleTag);
 
   const scriptTag = doc.createElement('script');
+  scriptTag.setAttribute(VIBE_INJECTED_ATTR, 'true');
   scriptTag.textContent = `
-    const messageType = ${JSON.stringify(VIBE_POST_MESSAGE_TYPE)};
-    let lastSelected = null;
-    document.addEventListener('click', (event) => {
-      const target = event.target.closest('[data-vibeditor-id]');
-      if (!target) return;
-      if (lastSelected) {
-        lastSelected.classList.remove('vibe-selected');
+    const SELECTED_MESSAGE = ${JSON.stringify(VIBE_MESSAGE_TYPE)};
+    const badgeAttr = ${JSON.stringify(VIBE_BADGE_ATTR)};
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const selectionOrder = [];
+    const labelMap = new Map();
+    let nextIndex = 0;
+
+    const indexToLabel = (index) => {
+      let value = index + 1;
+      let label = '';
+      while (value > 0) {
+        const remainder = (value - 1) % 26;
+        label = alphabet[remainder] + label;
+        value = Math.floor((value - 1) / 26);
       }
-      target.classList.add('vibe-selected');
-      lastSelected = target;
+      return label;
+    };
+
+    const sendSelection = () => {
+      const targets = selectionOrder.map((node) => {
+        const clone = node.cloneNode(true);
+        const badge = clone.querySelector('[' + badgeAttr + ']');
+        if (badge) badge.remove();
+        return {
+          label: labelMap.get(node),
+          outerHTML: clone.outerHTML,
+          tagName: node.tagName.toLowerCase(),
+        };
+      });
       window.parent.postMessage({
-        type: messageType,
-        action: 'selection-changed',
-        selectedIds: [target.dataset.vibeditorId],
+        type: SELECTED_MESSAGE,
+        selectionType: targets.length > 1 ? 'multi' : 'single',
+        targets,
       }, '*');
+    };
+
+    const addBadge = (node, label) => {
+      const badge = document.createElement('span');
+      badge.className = 'vibe-badge';
+      badge.textContent = label;
+      badge.setAttribute(badgeAttr, 'true');
+      node.appendChild(badge);
+    };
+
+    const removeBadge = (node) => {
+      const badge = node.querySelector('[' + badgeAttr + ']');
+      if (badge) badge.remove();
+    };
+
+    const toggleSelection = (node) => {
+      const existingIndex = selectionOrder.indexOf(node);
+      if (existingIndex >= 0) {
+        selectionOrder.splice(existingIndex, 1);
+        node.classList.remove('vibe-selected');
+        removeBadge(node);
+        node.removeAttribute('data-vibeditor-id');
+        labelMap.delete(node);
+        if (selectionOrder.length === 0) {
+          nextIndex = 0;
+        }
+        sendSelection();
+        return;
+      }
+
+      const label = indexToLabel(nextIndex);
+      nextIndex += 1;
+      selectionOrder.push(node);
+      labelMap.set(node, label);
+      node.setAttribute('data-vibeditor-id', label);
+      node.classList.add('vibe-selected');
+      addBadge(node, label);
+      sendSelection();
+    };
+
+    const preventDefaultEvents = (event) => {
+      const target = event.target.closest('body *');
+      if (!target) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[' + badgeAttr + ']')) return;
+      const target = event.target.closest('body *');
+      if (!target || target === document.body) return;
+      event.preventDefault();
+      event.stopPropagation();
+      toggleSelection(target);
     });
+
+    document.addEventListener('mouseover', (event) => {
+      const target = event.target.closest('body *');
+      if (!target || target === document.body) return;
+      target.classList.add('vibe-hover');
+    });
+
+    document.addEventListener('mouseout', (event) => {
+      const target = event.target.closest('body *');
+      if (!target || target === document.body) return;
+      target.classList.remove('vibe-hover');
+    });
+
+    document.addEventListener('submit', preventDefaultEvents);
+    document.addEventListener('dragstart', preventDefaultEvents);
   `;
   doc.body.appendChild(scriptTag);
-
-  if (labelled.length === 0) {
-    return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
-  }
 
   return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
 
-const render = () => {
-  elements.iframe.srcdoc = buildIframeHtml(state.sourceFullHtml);
-  elements.selectedIds.textContent = state.selectedIds.length
-    ? state.selectedIds.join(', ')
-    : 'なし';
-  elements.historyCount.textContent = String(state.commandHistory.length);
-};
-
-const updatePayloadLog = (payload, result) => {
-  elements.payloadLog.textContent = JSON.stringify(
-    {
-      input: payload,
-      output: result,
-    },
-    null,
-    2,
-  );
-};
-
-const collectTargetOuterHtmls = () => {
-  if (state.selectedIds.length === 0) {
-    return [];
-  }
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(state.sourceFullHtml, 'text/html');
-  const elementsMap = new Map(
-    [...doc.querySelectorAll('[data-vibeditor-id]')].map((node) => [
-      node.getAttribute('data-vibeditor-id'),
-      node,
-    ]),
-  );
-  return state.selectedIds
-    .map((id) => elementsMap.get(id))
-    .filter(Boolean)
-    .map((node) => node.outerHTML);
-};
-
-const applyMockLlmEdit = (html, instruction, selectedIds) => {
-  if (selectedIds.length === 0) {
+const applyMockLlmEdit = (html, instruction, selection) => {
+  if (!selection || selection.targets.length === 0) {
     return html;
   }
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
-  selectedIds.forEach((id) => {
-    const target = doc.querySelector(`[data-vibeditor-id="${id}"]`);
-    if (!target) {
+  selection.targets.forEach((target) => {
+    const node = doc.querySelector(`[data-vibeditor-id="${target.label}"]`);
+    if (!node) {
       return;
     }
-    const currentText = target.textContent ?? '';
-    target.textContent = `${currentText} (${instruction})`;
+    const currentText = node.textContent ?? '';
+    node.textContent = `${currentText} (${instruction})`;
   });
   return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
 
-const handleGenerate = () => {
+const handleSelectionMessage = (payload) => {
+  if (!payload || payload.type !== VIBE_MESSAGE_TYPE) {
+    return;
+  }
+  state.selection = payload.targets.length
+    ? {
+        type: payload.selectionType,
+        targets: payload.targets,
+      }
+    : null;
+  updateCommandBar();
+};
+
+const handleRunInstruction = async () => {
+  if (!state.selection) {
+    return;
+  }
   const instruction = elements.instructionInput.value.trim();
+  if (!instruction) {
+    return;
+  }
+  setProcessing(true);
+
+  const sourceWithLabels = extractSourceWithLabels();
   const payload = {
-    source_full: state.sourceFullHtml,
-    target_outerHTMLs: collectTargetOuterHtmls(),
+    source_full: sourceWithLabels,
+    target_outerHTMLs: state.selection.targets.map((target) => target.outerHTML),
     user_instruction: instruction,
+    model: 'demo-llm',
   };
 
-  const mockOutputHtml = applyMockLlmEdit(
-    state.sourceFullHtml,
-    instruction || '編集済み',
-    state.selectedIds,
-  );
+  const mockOutputHtml = applyMockLlmEdit(sourceWithLabels, instruction, state.selection);
   const sanitized = sanitizeHtml(mockOutputHtml);
 
-  state.commandHistory.push({
-    beforeHtml: state.sourceFullHtml,
-    afterHtml: sanitized,
-    userInstruction: instruction,
-    timestamp: Date.now(),
-  });
+  await new Promise((resolve) => setTimeout(resolve, 800));
 
-  state.sourceFullHtml = sanitized;
-  updatePayloadLog(payload, { full_html: sanitized });
-  render();
+  state.history.push(state.currentSource);
+  state.currentSource = sanitized;
+  state.lastInstruction = instruction;
+  elements.instructionInput.value = '';
+  setProcessing(false);
+  updateIframe(state.currentSource);
+
+  console.info('LLM payload', payload);
 };
 
 const handleUndo = () => {
-  const last = state.commandHistory.pop();
-  if (!last) {
+  if (state.history.length === 0) {
     return;
   }
-  state.sourceFullHtml = last.beforeHtml;
-  state.selectedIds = [];
-  updatePayloadLog(null, null);
-  render();
+  const previous = state.history.pop();
+  state.currentSource = previous;
+  updateIframe(state.currentSource);
+  updateCommandBar();
 };
 
-const handleLoadHtml = () => {
-  const input = elements.htmlInput.value.trim();
-  state.sourceFullHtml = input.length ? input : DEFAULT_HTML;
-  state.selectedIds = [];
-  state.commandHistory = [];
-  updatePayloadLog(null, null);
-  render();
+const handleLoadSource = (value) => {
+  const trimmed = value.trim();
+  if (!htmlIncludesRoot(trimmed)) {
+    elements.sourceError.textContent = 'HTML構造が不足しています。<html>と<body>を含めてください。';
+    return;
+  }
+  elements.sourceError.textContent = '';
+  state.currentSource = trimmed;
+  state.history = [];
+  state.selection = null;
+  updateIframe(state.currentSource);
+  updateCommandBar();
+  closeModal();
 };
 
 window.addEventListener('message', (event) => {
-  const data = event.data;
-  if (!data || data.type !== VIBE_POST_MESSAGE_TYPE) {
-    return;
-  }
-  if (data.action === 'selection-changed') {
-    state.selectedIds = data.selectedIds ?? [];
-    render();
+  handleSelectionMessage(event.data);
+});
+
+elements.loadSource.addEventListener('click', () => {
+  handleLoadSource(elements.sourceInput.value);
+});
+
+elements.loadSample.addEventListener('click', () => {
+  elements.sourceInput.value = DEFAULT_HTML;
+  handleLoadSource(DEFAULT_HTML);
+});
+
+elements.copySource.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(elements.sourceInput.value);
+  } catch (error) {
+    console.warn('コピーに失敗しました', error);
   }
 });
 
-elements.htmlInput.value = DEFAULT_HTML;
+elements.openSource.addEventListener('click', () => {
+  openModal();
+});
 
-handleLoadHtml();
+elements.runInstruction.addEventListener('click', handleRunInstruction);
 
-elements.loadButton.addEventListener('click', handleLoadHtml);
+elements.undo.addEventListener('click', handleUndo);
 
-elements.generateButton.addEventListener('click', handleGenerate);
+elements.instructionInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    handleRunInstruction();
+  }
+});
 
-elements.undoButton.addEventListener('click', handleUndo);
+state.currentSource = DEFAULT_HTML;
+openModal();
+updateIframe(state.currentSource);
+updateCommandBar();
+setProcessing(false);

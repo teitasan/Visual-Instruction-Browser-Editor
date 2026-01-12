@@ -1,11 +1,17 @@
 // iframe interaction helpers for VIBE MVP.
 
-export const VIBE_POST_MESSAGE_TYPE = 'vibe-editor';
+export const VIBE_POST_MESSAGE_TYPE = 'selected';
+
+export type VibeditorSelectionTarget = {
+  label: string;
+  outerHTML: string;
+  tagName: string;
+};
 
 export type VibeditorSelectionMessage = {
   type: typeof VIBE_POST_MESSAGE_TYPE;
-  action: 'selection-changed';
-  selectedIds: string[];
+  selectionType: 'single' | 'multi';
+  targets: VibeditorSelectionTarget[];
 };
 
 export const isVibeMessage = (payload: unknown): payload is VibeditorSelectionMessage => {
