@@ -638,7 +638,22 @@ function setProcessing(value) {
 
 function sanitizeHtml(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
-  doc.querySelectorAll("script").forEach((el) => el.remove());
+  doc.querySelectorAll("script").forEach((el) => {
+    const src = (el.getAttribute("src") || "").trim();
+    if (!src) {
+      el.remove();
+      return;
+    }
+    try {
+      const url = new URL(src, "https://example.invalid");
+      const isHttps = url.protocol === "https:";
+      const isTailwindCdn = url.hostname === "cdn.tailwindcss.com";
+      if (isHttps && isTailwindCdn) return;
+    } catch {
+      // ignore
+    }
+    el.remove();
+  });
 
   doc.querySelectorAll("*").forEach((el) => {
     [...el.attributes].forEach((attr) => {
