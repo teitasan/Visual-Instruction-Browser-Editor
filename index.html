@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>VIBE | Visual Instruction Browser Editor</title>
+  <link rel="icon" href="asset/img/JOLT_favicon.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -53,22 +54,18 @@
   <div id="source-modal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
-        <h1>URLを入力</h1>
-        <p>編集したいページのURLを指定して開始します（空ならサンプルを表示します）。</p>
+        <h1>デモを開始</h1>
+        <p>デモ用ページ（固定）を読み込みます。Gemini APIキーを入力して開始してください。</p>
       </div>
       <div class="modal-body">
-        <label class="field">
-          <span>ページURL</span>
-          <input id="source-url" type="url" inputmode="url" placeholder="https://example.com/" />
-        </label>
         <label class="field">
           <span>Gemini APIキー</span>
           <input id="gemini-api-key" type="password" autocomplete="off" placeholder="AIza..." />
         </label>
-        <div id="source-warning" class="warning" hidden>URLが不正か、読み込みに失敗しました。</div>
+        <div id="source-warning" class="warning" hidden>デモページの読み込みに失敗しました。</div>
       </div>
       <div class="modal-actions">
-        <button id="sample-button" class="ghost">サンプル読み込み</button>
+        <button id="sample-button" class="ghost">APIキーをクリア</button>
         <button id="start-button" class="primary">開始</button>
       </div>
     </div>

@@ -202,38 +202,18 @@ const modeToggleButton = document.getElementById("mode-toggle");
 const geminiApiKeyInput = document.getElementById("gemini-api-key");
 const overlay = document.getElementById("processing-overlay");
 const modal = document.getElementById("source-modal");
-const sourceUrlInput = document.getElementById("source-url");
 const sampleButton = document.getElementById("sample-button");
 const startButton = document.getElementById("start-button");
 const warning = document.getElementById("source-warning");
 
 state.previewMode = localStorage.getItem("vibe.previewMode") || "select";
 
-if (sourceUrlInput) sourceUrlInput.value = "";
 if (geminiApiKeyInput) geminiApiKeyInput.value = localStorage.getItem("vibe.geminiApiKey") || "";
 
 sampleButton.addEventListener("click", () => {
-  if (sourceUrlInput) sourceUrlInput.value = "";
+  if (geminiApiKeyInput) geminiApiKeyInput.value = "";
   warning.hidden = true;
 });
-
-async function loadHtmlFromUrl(url) {
-  const targetUrl = url.trim();
-  const tryFetch = async (endpoint) => {
-    const response = await fetch(endpoint, { method: "GET" });
-    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-    return response.text();
-  };
-
-  // Prefer same-origin proxy (avoids CORS): GET /api/fetch?url=...
-  try {
-    const proxied = `/api/fetch?url=${encodeURIComponent(targetUrl)}`;
-    return await tryFetch(proxied);
-  } catch {
-    // Fallback to direct fetch (may fail due to CORS).
-    return await tryFetch(targetUrl);
-  }
-}
 
 function withBaseHref(html, url) {
   const doc = new DOMParser().parseFromString(html, "text/html");
@@ -249,7 +229,6 @@ function withBaseHref(html, url) {
 }
 
 startButton.addEventListener("click", async () => {
-  const url = sourceUrlInput?.value?.trim() || "";
   warning.hidden = true;
 
   const apiKey = geminiApiKeyInput?.value?.trim() || "";
@@ -259,18 +238,18 @@ startButton.addEventListener("click", async () => {
   }
   localStorage.setItem("vibe.geminiApiKey", apiKey);
 
-  if (!url) {
-    state.currentSource = sampleHtml;
-  } else {
-    try {
-      const html = await loadHtmlFromUrl(url);
-      state.currentSource = withBaseHref(html, url);
-    } catch (error) {
-      console.error(error);
-      warning.hidden = false;
-      alert("URLの読み込みに失敗しました（CORS/ネットワークの可能性）。");
-      return;
-    }
+  try {
+    const demoUrl = new URL("demo/jolt/index.html", window.location.href).toString();
+    const baseHref = new URL("demo/jolt/", window.location.href).toString();
+    const response = await fetch(demoUrl);
+    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+    const html = await response.text();
+    state.currentSource = withBaseHref(html, baseHref);
+  } catch (error) {
+    console.error(error);
+    warning.hidden = false;
+    alert("デモページの読み込みに失敗しました。");
+    return;
   }
 
   state.history = [];
@@ -280,10 +259,6 @@ startButton.addEventListener("click", async () => {
   modal.style.display = "none";
   renderPreview();
   updateCommandBar();
-});
-
-sourceUrlInput?.addEventListener("input", () => {
-  warning.hidden = true;
 });
 
 function renderPreview() {
@@ -311,25 +286,7 @@ function injectInteraction(html) {
       --vibe-neon-ink: rgba(73, 214, 255, 0.95);
     }
     [data-vibeditor-id] {
-      outline: 1.5px solid var(--vibe-neon-ink);
-      outline-offset: 2px;
-      position: relative;
-      animation: vibeditor-select-in 220ms cubic-bezier(0.2, 0, 0, 1);
-    }
-    @keyframes vibeditor-select-in {
-      from {
-        outline-offset: 4px;
-        box-shadow:
-          0 0 0 0 rgba(73, 214, 255, 0),
-          0 0 0 0 rgba(124, 92, 255, 0);
-      }
-      to {
-        outline-offset: 2px;
-        box-shadow:
-          0 0 0 3px rgba(73, 214, 255, 0.14),
-          0 0 22px rgba(73, 214, 255, 0.28),
-          0 0 44px rgba(124, 92, 255, 0.20);
-      }
+      outline: none;
     }
     .vibeditor-hover-overlay {
       position: fixed;
@@ -354,45 +311,50 @@ function injectInteraction(html) {
       opacity: 1;
       transform: translateZ(0) scale(1);
     }
-    .vibeditor-badge {
-      position: absolute;
-      top: -12px;
-      left: -12px;
-      background: linear-gradient(135deg, rgba(73, 214, 255, 0.92), rgba(124, 92, 255, 0.92));
-      color: white;
-      font-size: 12px;
-      font-family: sans-serif;
+    .vibeditor-selection-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2147483646;
+    }
+    .vibeditor-selected-box {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      border: 2px solid rgba(73, 214, 255, 0.95);
+      border-radius: 12px;
+      box-shadow:
+        0 0 0 2px rgba(73, 214, 255, 0.12),
+        0 0 26px rgba(73, 214, 255, 0.30),
+        0 0 56px rgba(124, 92, 255, 0.20);
+      transform: translateZ(0);
+      transition: opacity 140ms ease, transform 140ms ease;
+      will-change: left, top, width, height;
+      opacity: 1;
+    }
+    .vibeditor-selected-label {
+      position: fixed;
+      left: 0;
+      top: 0;
       padding: 4px 8px;
-      border-radius: 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.96);
+      background: linear-gradient(135deg, rgba(73, 214, 255, 0.92), rgba(124, 92, 255, 0.92));
       box-shadow:
         0 10px 24px rgba(0, 0, 0, 0.22),
         0 0 18px rgba(73, 214, 255, 0.22);
-      pointer-events: none;
-      z-index: 9999;
-      opacity: 0;
-      transform: translateY(3px) scale(0.98);
-      animation: vibeditor-badge-in 160ms cubic-bezier(0.2, 0, 0, 1) forwards;
-    }
-    @keyframes vibeditor-badge-in {
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-    .vibeditor-badge.is-out {
-      animation: vibeditor-badge-out 140ms ease forwards;
-    }
-    @keyframes vibeditor-badge-out {
-      to {
-        opacity: 0;
-        transform: translateY(3px) scale(0.98);
-      }
+      transform: translateZ(0);
+      opacity: 1;
     }
     @media (prefers-reduced-motion: reduce) {
-      [data-vibeditor-id] { animation: none; box-shadow: none; }
       .vibeditor-hover-overlay { transition: none; }
-      .vibeditor-badge { animation: none; opacity: 1; transform: none; }
-      .vibeditor-badge.is-out { animation: none; }
+      .vibeditor-selected-box { transition: none; }
     }
   `;
 
@@ -407,13 +369,18 @@ function injectInteraction(html) {
       const hoverOverlay = document.createElement('div');
       hoverOverlay.className = 'vibeditor-hover-overlay';
       document.body.appendChild(hoverOverlay);
+      const selectionLayer = document.createElement('div');
+      selectionLayer.className = 'vibeditor-selection-layer';
+      document.body.appendChild(selectionLayer);
+
+      const selectionOverlays = new Map(); // label -> { box, labelEl, element }
       let pendingHoverFrame = null;
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let pendingLayoutFrame = null;
 
       const notifyParent = () => {
         const targets = selection.map((item) => {
           const clone = item.element.cloneNode(true);
-          clone.querySelectorAll('.vibeditor-badge').forEach((badge) => badge.remove());
           return {
             label: item.label,
             outerHTML: clone.outerHTML,
@@ -427,34 +394,85 @@ function injectInteraction(html) {
         }, '*');
       };
 
-      const createBadge = (label) => {
-        const badge = document.createElement('span');
-        badge.className = 'vibeditor-badge';
-        badge.textContent = label;
-        return badge;
+      const scheduleLayout = () => {
+        if (pendingLayoutFrame) return;
+        pendingLayoutFrame = requestAnimationFrame(() => {
+          pendingLayoutFrame = null;
+          updateSelectionOverlays();
+        });
+      };
+
+      const createSelectionOverlay = (label, element) => {
+        const box = document.createElement('div');
+        box.className = 'vibeditor-selected-box';
+        const labelEl = document.createElement('div');
+        labelEl.className = 'vibeditor-selected-label';
+        labelEl.textContent = label;
+        selectionLayer.appendChild(box);
+        selectionLayer.appendChild(labelEl);
+        selectionOverlays.set(label, { box, labelEl, element });
+      };
+
+      const removeSelectionOverlay = (label) => {
+        const entry = selectionOverlays.get(label);
+        if (!entry) return;
+        entry.box.remove();
+        entry.labelEl.remove();
+        selectionOverlays.delete(label);
+      };
+
+      const clearSelectionOverlays = () => {
+        selectionOverlays.forEach((_, label) => removeSelectionOverlay(label));
+      };
+
+      const updateSelectionOverlays = () => {
+        if (mode !== 'select') return;
+        selectionOverlays.forEach((entry, label) => {
+          if (!entry.element || !entry.element.isConnected) {
+            removeSelectionOverlay(label);
+            return;
+          }
+          const rect = entry.element.getBoundingClientRect();
+          const w = Math.max(0, rect.width);
+          const h = Math.max(0, rect.height);
+          if (w === 0 || h === 0) {
+            entry.box.style.opacity = '0';
+            entry.labelEl.style.opacity = '0';
+            return;
+          }
+          entry.box.style.opacity = '1';
+          entry.labelEl.style.opacity = '1';
+          entry.box.style.left = rect.left + 'px';
+          entry.box.style.top = rect.top + 'px';
+          entry.box.style.width = w + 'px';
+          entry.box.style.height = h + 'px';
+
+          const labelLeft = Math.max(6, rect.left - 8);
+          const labelTop = Math.max(6, rect.top - 14);
+          entry.labelEl.style.left = labelLeft + 'px';
+          entry.labelEl.style.top = labelTop + 'px';
+        });
       };
 
       const selectElement = (element) => {
         const label = labels[labelIndex] || String(labelIndex + 1);
         labelIndex += 1;
         element.setAttribute('data-vibeditor-id', label);
-        const badge = createBadge(label);
-        element.appendChild(badge);
-        selection.push({ element, label, badge });
+        selection.push({ element, label });
+        createSelectionOverlay(label, element);
+        scheduleLayout();
       };
 
       const deselectElement = (element) => {
         const index = selection.findIndex((item) => item.element === element);
         if (index === -1) return;
-        const [{ badge }] = selection.splice(index, 1);
-        if (badge) {
-          badge.classList.add('is-out');
-          window.setTimeout(() => badge.remove(), 140);
-        }
+        const [{ label }] = selection.splice(index, 1);
+        removeSelectionOverlay(label);
         element.removeAttribute('data-vibeditor-id');
         if (selection.length === 0) {
           labelIndex = 0;
         }
+        scheduleLayout();
       };
 
       function clearHover() {
@@ -469,6 +487,16 @@ function injectInteraction(html) {
         if (event.data?.type !== 'vibeditor-mode') return;
         mode = event.data.mode === 'interact' ? 'interact' : 'select';
         clearHover();
+        if (mode !== 'select') {
+          clearSelectionOverlays();
+        } else {
+          selection.forEach((item) => {
+            if (!selectionOverlays.has(item.label)) {
+              createSelectionOverlay(item.label, item.element);
+            }
+          });
+          scheduleLayout();
+        }
       });
 
       const onPointerOver = (event) => {
@@ -476,7 +504,6 @@ function injectInteraction(html) {
         if (mode !== 'select') return;
         const target = event.target.closest('body *');
         if (!target) return;
-        if (target.classList.contains('vibeditor-badge')) return;
         if (target === hoverOverlay) return;
         if (target.hasAttribute('data-vibeditor-id')) {
           clearHover();
@@ -505,7 +532,7 @@ function injectInteraction(html) {
         event.preventDefault();
         event.stopPropagation();
         const target = event.target.closest('body *');
-        if (!target || target.classList.contains('vibeditor-badge')) return;
+        if (!target) return;
         clearHover();
         if (target.hasAttribute('data-vibeditor-id')) {
           deselectElement(target);
@@ -524,6 +551,9 @@ function injectInteraction(html) {
         event.stopPropagation();
       }, true);
 
+      window.addEventListener('scroll', scheduleLayout, true);
+      window.addEventListener('resize', scheduleLayout);
+
       window.addEventListener('message', (event) => {
         if (event.data?.type !== 'vibeditor-scroll-to') return;
         const label = event.data.label;
@@ -535,6 +565,7 @@ function injectInteraction(html) {
           block: 'center',
           inline: 'nearest',
         });
+        scheduleLayout();
       });
     })();
   `;
