@@ -13,16 +13,34 @@
     </div>
 
     <div id="command-bar" class="command-bar idle" aria-live="polite">
-      <div class="command-status">
-        <div class="status-title">Selection</div>
-        <div id="selection-summary" class="status-body">要素を選択してください</div>
-      </div>
-      <div class="command-input">
-        <textarea id="instruction-input" rows="2" placeholder="背景を青にして / AとCの順番を逆にして" disabled></textarea>
-      </div>
-      <div class="command-actions">
-        <button id="run-button" class="primary" disabled>実行</button>
-        <button id="undo-button" class="ghost" disabled>Undo</button>
+      <div class="liquid-reflection" aria-hidden="true"></div>
+      <textarea id="instruction-input" rows="3" placeholder="指示を入力…（⌘/Ctrl+Enterで送信）" disabled></textarea>
+      <div class="command-footer">
+        <div id="selection-strip" class="selection-strip" aria-label="Selection"></div>
+        <div class="command-actions">
+          <button id="back-button" class="icon ghost" disabled aria-label="戻る">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button id="forward-button" class="icon ghost" disabled aria-label="進む">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button id="mode-toggle" class="icon ghost" aria-label="モード切り替え" aria-pressed="true" title="選択モード">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 3l7 18 2.2-7.2L19.5 11 3 3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button id="run-button" class="icon primary" disabled aria-label="実行">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M7 8l5-5 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -35,19 +53,19 @@
   <div id="source-modal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-content">
       <div class="modal-header">
-        <h1>HTMLソースを入力</h1>
-        <p>編集したいHTMLを貼り付けるか、サンプルを読み込んで開始します。</p>
+        <h1>URLを入力</h1>
+        <p>編集したいページのURLを指定して開始します（空ならサンプルを表示します）。</p>
       </div>
       <div class="modal-body">
         <label class="field">
-          <span>HTMLソース</span>
-          <textarea id="source-input" rows="12"></textarea>
+          <span>ページURL</span>
+          <input id="source-url" type="url" inputmode="url" placeholder="https://example.com/" />
         </label>
         <label class="field">
-          <span>HTMLファイル読み込み</span>
-          <input id="file-input" type="file" accept=".html,text/html" />
+          <span>Gemini APIキー</span>
+          <input id="gemini-api-key" type="password" autocomplete="off" placeholder="AIza..." />
         </label>
-        <div id="source-warning" class="warning" hidden>HTML構造が不足していますが、このまま開始できます。</div>
+        <div id="source-warning" class="warning" hidden>URLが不正か、読み込みに失敗しました。</div>
       </div>
       <div class="modal-actions">
         <button id="sample-button" class="ghost">サンプル読み込み</button>
@@ -56,6 +74,36 @@
     </div>
   </div>
 
-  <script src="app.js" type="module"></script>
+  <script src="app.js"></script>
+
+  <svg style="display: none" aria-hidden="true">
+    <filter id="glass-distortion" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
+      <feTurbulence type="fractalNoise" baseFrequency="0.008 0.01" numOctaves="1" seed="5" result="turbulence" />
+      <feComponentTransfer in="turbulence" result="mapped">
+        <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5" />
+        <feFuncG type="gamma" amplitude="0" exponent="1" offset="0" />
+        <feFuncB type="gamma" amplitude="0" exponent="1" offset="0.5" />
+      </feComponentTransfer>
+      <feGaussianBlur in="turbulence" stdDeviation="3" result="softMap" />
+      <feSpecularLighting
+        in="softMap"
+        surfaceScale="5"
+        specularConstant="1"
+        specularExponent="100"
+        lighting-color="white"
+        result="specLight"
+      >
+        <fePointLight x="-200" y="-200" z="300" />
+      </feSpecularLighting>
+      <feComposite in="specLight" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litImage" />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="softMap"
+        scale="45"
+        xChannelSelector="R"
+        yChannelSelector="G"
+      />
+    </filter>
+  </svg>
 </body>
 </html>

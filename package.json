@@ -1,0 +1,13 @@
+{
+  "name": "visual-instruction-browser-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^1.35.0"
+  }
+}
+
