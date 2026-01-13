@@ -18,13 +18,13 @@
         class="antialiased bg-[#0F172A] text-slate-50 selection:bg-purple-500 selection:text-white"
         style="font-family: &#39;Noto Sans JP&#39;, sans-serif;"
         cz-shortcut-listen="true">
-        <!-- Header -->
-        <header class="fixed w-full top-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10">
-            <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-                
-                    <img src="../../asset/img/JOLT_logo.png" alt="JOLT" class="h-14">
-                
-                <nav class="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-300">
+	        <!-- Header -->
+	        <header class="fixed w-full top-0 z-50 bg-[#0F172A]/80 backdrop-blur-md border-b border-white/10">
+	            <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+	                <a href="/" class="-m-1.5 p-1.5" data-turbo="false">
+	                    <img src="../../asset/img/JOLT_logo.png" alt="JOLT" class="h-14">
+	                </a>
+	                <nav class="hidden lg:flex items-center gap-8 text-sm font-medium text-slate-300">
                     <a href="#problem" class="hover:text-white transition-colors duration-300">課題</a>
                     <a href="#features" class="hover:text-white transition-colors duration-300">機能</a>
                     <a href="#comparison" class="hover:text-white transition-colors duration-300">比較</a>
@@ -40,16 +40,16 @@
                                 <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
                             </svg>
                         </button>
-                        <div id="lp-services-menu"
-                             class="absolute left-0 top-full z-50 mt-3 w-72 rounded-2xl bg-[#0F172A] border border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] hidden">
-                            <div class="p-2">
-                                
-                                
-                                
-                                
-                                
-                            </div>
-                        </div>
+	                        <div id="lp-services-menu"
+	                             class="absolute left-0 top-full z-50 mt-3 w-72 rounded-2xl bg-[#0F172A] border border-white/10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6)] hidden">
+	                            <div class="p-2">
+	                                <a href="/generator" class="block rounded-xl px-3 py-2 text-slate-200 hover:bg-white/5 transition" data-turbo="false">JOLT</a>
+	                                <a href="/combined_analysis" class="block rounded-xl px-3 py-2 text-slate-200 hover:bg-white/5 transition" data-turbo="false">KoKoScope</a>
+	                                <a href="/lp_improvement_proposals" class="block rounded-xl px-3 py-2 text-slate-200 hover:bg-white/5 transition" data-turbo="false">KaiZenith</a>
+	                                <a href="/mojioko" class="block rounded-xl px-3 py-2 text-slate-200 hover:bg-white/5 transition" data-turbo="false">MoJioKo</a>
+	                                <a href="/analytics" class="block rounded-xl px-3 py-2 text-slate-200 hover:bg-white/5 transition" data-turbo="false">効果測定</a>
+	                            </div>
+	                        </div>
                     </div>
                 </nav>
                 <div class="flex items-center gap-3">
@@ -62,20 +62,17 @@
                         <span class="sr-only">メニューを開く</span>
                         <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
-                    
-                        
-                            <span class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>ダッシュボードへ
-                        
-                    
-                        
-                            <span class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>新規登録
-                        
-                    
-                </div>
-            </div>
-        </header>
+	                        </svg>
+	                    </button>
+	                    <a
+	                        href="/users/sign_up"
+	                        class="hidden md:inline-flex items-center justify-center bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/10 hover:scale-105"
+	                        data-turbo="false">
+	                        <span class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>新規登録
+	                    </a>
+	                </div>
+	            </div>
+	        </header>
         <div id="lp-mobile-menu"
              class="fixed inset-0 hidden lg:hidden"
              style="z-index: 60;"
@@ -102,31 +99,28 @@
                         <a href="#faq" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition">Q&amp;A</a>
                     </div>
 
-                    <div class="pt-6 border-t border-white/10">
-                        <div class="text-xs text-slate-400 font-bold tracking-widest mb-3">他サービス</div>
-                        <div class="space-y-2">
-                            
-                            
-                            
-                            
-                            
-                        </div>
-                    </div>
+	                    <div class="pt-6 border-t border-white/10">
+	                        <div class="text-xs text-slate-400 font-bold tracking-widest mb-3">他サービス</div>
+	                        <div class="space-y-2">
+	                            <a href="/generator" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition" data-turbo="false">JOLT</a>
+	                            <a href="/combined_analysis" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition" data-turbo="false">KoKoScope</a>
+	                            <a href="/lp_improvement_proposals" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition" data-turbo="false">KaiZenith</a>
+	                            <a href="/mojioko" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition" data-turbo="false">MoJioKo</a>
+	                            <a href="/analytics" class="block rounded-xl px-3 py-2 hover:bg-white/5 transition" data-turbo="false">効果測定</a>
+	                        </div>
+	                    </div>
 
-                    <div class="pt-6 border-t border-white/10">
-                        
-                            
-                                ダッシュボードへ
-                            
-                        
-                            
-                                新規登録
-                            
-                        
-                    </div>
-                </div>
-            </div>
-        </div>
+	                    <div class="pt-6 border-t border-white/10">
+	                        <a
+	                            href="/users/sign_up"
+	                            class="inline-flex items-center justify-center w-full bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 border border-white/10"
+	                            data-turbo="false">
+	                            新規登録
+	                        </a>
+	                    </div>
+	                </div>
+	            </div>
+	        </div>
         <!-- Hero Section -->
         <section
             class="relative pt-36 pb-20 md:pt-48 md:pb-32 overflow-hidden"
@@ -157,22 +151,18 @@
                     リスクを最小化し、CVRを最大化する<br class="md:hidden">
                     次世代のマーケティングOSです。
                 </p>
-                <!-- CTA Area -->
-                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full px-4">
-                    
-                            
-                            <span class="relative z-10">ダッシュボードへ</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        
-                    
-                        
-                            <span class="relative z-10">新規登録</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                        
-                    
-                    <a
-                        href="#features"
-                        class="group flex items-center gap-2 text-slate-400 hover:text-white font-medium py-4 px-8 transition-colors duration-300">
+	                <!-- CTA Area -->
+	                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center w-full px-4">
+	                    <a
+	                        href="/users/sign_up"
+	                        class="relative overflow-hidden group bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 px-12 rounded-full text-lg w-full sm:w-auto text-center tracking-wide shadow-[0_0_25px_rgba(124,58,237,0.4)] hover:shadow-[0_0_40px_rgba(124,58,237,0.6)] hover:-translate-y-1 transition-all duration-300"
+	                        data-turbo="false">
+	                        <span class="relative z-10">新規登録</span>
+	                        <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+	                    </a>
+	                    <a
+	                        href="#features"
+	                        class="group flex items-center gap-2 text-slate-400 hover:text-white font-medium py-4 px-8 transition-colors duration-300">
                         機能詳細を見る
                         <svg
                             class="w-5 h-5 group-hover:translate-y-1 transition-transform duration-300"
@@ -369,14 +359,17 @@
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mt-10">
-                            
-                                JOLTを使ってみる →
-                            
-                        </div>
-                    </div>
-                </div>
+	                        </div>
+	                        <div class="mt-10">
+	                            <a
+	                                href="/generator"
+	                                class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/10 hover:scale-105"
+	                                data-turbo="false">
+	                                JOLTを使ってみる →
+	                            </a>
+	                        </div>
+	                    </div>
+	                </div>
 
                 <!-- Feature 2: MoJioKo (LP Transcription) -->
                 <div class="flex flex-col lg:flex-row items-center gap-16 mb-32">
@@ -428,14 +421,17 @@
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mt-10">
-                            
-                                MoJioKoを使ってみる →
-                            
-                        </div>
-                    </div>
-                </div>
+	                        </div>
+	                        <div class="mt-10">
+	                            <a
+	                                href="/mojioko"
+	                                class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/10 hover:scale-105"
+	                                data-turbo="false">
+	                                MoJioKoを使ってみる →
+	                            </a>
+	                        </div>
+	                    </div>
+	                </div>
 
                 <!-- Feature 3: KoKoScope -->
                 <div class="flex flex-col lg:flex-row items-center gap-16 mb-32">
@@ -487,14 +483,17 @@
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mt-10">
-                            
-                                KoKoScopeを使ってみる →
-                            
-                        </div>
-                    </div>
-                </div>
+	                        </div>
+	                        <div class="mt-10">
+	                            <a
+	                                href="/combined_analysis"
+	                                class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/10 hover:scale-105"
+	                                data-turbo="false">
+	                                KoKoScopeを使ってみる →
+	                            </a>
+	                        </div>
+	                    </div>
+	                </div>
 
                 <!-- Feature 4: KaiZenith -->
                 <div class="flex flex-col lg:flex-row items-center gap-16">
@@ -546,14 +545,17 @@
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mt-10">
-                            
-                                KaiZenithを使ってみる →
-                            
-                        </div>
-                    </div>
-                </div>
+	                        </div>
+	                        <div class="mt-10">
+	                            <a
+	                                href="/lp_improvement_proposals"
+	                                class="inline-flex items-center justify-center bg-white/10 hover:bg-white/20 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/10 hover:scale-105"
+	                                data-turbo="false">
+	                                KaiZenithを使ってみる →
+	                            </a>
+	                        </div>
+	                    </div>
+	                </div>
             </div>
         </section>
         <!-- Workflow -->
@@ -748,35 +750,23 @@
                     あなたのビジネスを加速させましょう。<br class="hidden md:block">
                     まずは無料デモで、そのスピードと品質を体感してください。
                 </p>
-                <div class="flex flex-col sm:flex-row justify-center gap-6 max-w-lg mx-auto">
-                    
-                            
-                            <span class="relative z-10">ダッシュボードへ</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 5l7 7-7 7">
-                                </path>
-                            </svg>
-                        
-                    
-                        
-                            <span class="relative z-10">新規登録</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                            <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 5l7 7-7 7">
-                                </path>
-                            </svg>
-                        
-                    
-                </div>
+	                <div class="flex flex-col sm:flex-row justify-center gap-6 max-w-lg mx-auto">
+	                    <a
+	                        href="/users/sign_up"
+	                        class="relative overflow-hidden group bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-5 px-10 rounded-full text-lg shadow-2xl hover:scale-105 transition transform w-full flex items-center justify-center gap-2"
+	                        data-turbo="false">
+	                        <span class="relative z-10">新規登録</span>
+	                        <div class="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+	                        <svg class="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+	                            <path
+	                                stroke-linecap="round"
+	                                stroke-linejoin="round"
+	                                stroke-width="2"
+	                                d="M9 5l7 7-7 7">
+	                            </path>
+	                        </svg>
+	                    </a>
+	                </div>
                 <div class="mt-8 flex justify-center items-center gap-4 text-sm text-slate-400">
                     <span class="flex items-center gap-1">
                         <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
