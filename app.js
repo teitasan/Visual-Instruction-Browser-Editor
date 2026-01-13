@@ -238,18 +238,19 @@ startButton.addEventListener("click", async () => {
   }
   localStorage.setItem("vibe.geminiApiKey", apiKey);
 
-  try {
-    const demoUrl = new URL("demo/jolt/index.html", window.location.href).toString();
-    const baseHref = new URL("demo/jolt/", window.location.href).toString();
-    const response = await fetch(demoUrl);
-    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-    const html = await response.text();
-    state.currentSource = withBaseHref(html, baseHref);
-  } catch (error) {
-    console.error(error);
-    warning.hidden = false;
-    alert("デモページの読み込みに失敗しました。");
-    return;
+	  try {
+	    const demoUrl = new URL("demo/jolt/index.html", window.location.href).toString();
+	    const baseHref = new URL("demo/jolt/", window.location.href).toString();
+	    const response = await fetch(demoUrl);
+	    if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+	    const html = await response.text();
+	    state.currentSource = withBaseHref(html, baseHref);
+	    state.allowedExternalScripts = extractAllowedExternalScripts(state.currentSource);
+	  } catch (error) {
+	    console.error(error);
+	    warning.hidden = false;
+	    alert("デモページの読み込みに失敗しました。");
+	    return;
   }
 
   state.history = [];
@@ -638,20 +639,51 @@ function setProcessing(value) {
 
 function sanitizeHtml(html) {
   const doc = new DOMParser().parseFromString(html, "text/html");
+
+  // Keep inline scripts removed, but preserve previously-allowed external scripts (e.g. CDN)
+  // to avoid breaking layouts that depend on them (Tailwind CDN, UI widgets, etc).
+  const allowedExternalScripts = Array.isArray(state?.allowedExternalScripts) ? state.allowedExternalScripts : [];
+
+  function normalizeScriptSrc(srcValue) {
+    const raw = String(srcValue || "").trim();
+    if (!raw) return null;
+    const candidate = raw.startsWith("//") ? `https:${raw}` : raw;
+    try {
+      const url = new URL(candidate, doc.baseURI || "https://example.invalid/");
+      if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+      return url.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  function ensureAllowedExternalScriptsExist() {
+    if (!allowedExternalScripts.length) return;
+    const head = doc.head || doc.querySelector("head");
+    if (!head) return;
+
+    const existing = new Set(
+      Array.from(doc.querySelectorAll("script[src]"))
+        .map((el) => normalizeScriptSrc(el.getAttribute("src")))
+        .filter(Boolean),
+    );
+
+    allowedExternalScripts.forEach((allowedSrc) => {
+      if (!allowedSrc || existing.has(allowedSrc)) return;
+      const script = doc.createElement("script");
+      script.setAttribute("src", allowedSrc);
+      head.appendChild(script);
+      existing.add(allowedSrc);
+    });
+  }
+
   doc.querySelectorAll("script").forEach((el) => {
-    const src = (el.getAttribute("src") || "").trim();
+    const src = normalizeScriptSrc(el.getAttribute("src"));
     if (!src) {
       el.remove();
       return;
     }
-    try {
-      const url = new URL(src, "https://example.invalid");
-      const isHttps = url.protocol === "https:";
-      const isTailwindCdn = url.hostname === "cdn.tailwindcss.com";
-      if (isHttps && isTailwindCdn) return;
-    } catch {
-      // ignore
-    }
+    if (allowedExternalScripts.length && allowedExternalScripts.includes(src)) return;
     el.remove();
   });
 
@@ -673,7 +705,33 @@ function sanitizeHtml(html) {
     el.classList.remove("vibeditor-hover");
   });
 
+  ensureAllowedExternalScriptsExist();
   return "<!doctype html>\n" + doc.documentElement.outerHTML;
+}
+
+function extractAllowedExternalScripts(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const scripts = Array.from(doc.querySelectorAll("script[src]"));
+  const normalized = [];
+  const seen = new Set();
+
+  scripts.forEach((el) => {
+    const raw = (el.getAttribute("src") || "").trim();
+    if (!raw) return;
+    const candidate = raw.startsWith("//") ? `https:${raw}` : raw;
+    try {
+      const url = new URL(candidate, doc.baseURI || "https://example.invalid/");
+      if (url.protocol !== "https:" && url.protocol !== "http:") return;
+      const value = url.toString();
+      if (seen.has(value)) return;
+      seen.add(value);
+      normalized.push(value);
+    } catch {
+      // ignore
+    }
+  });
+
+  return normalized;
 }
 
 function getGeminiSettings() {
