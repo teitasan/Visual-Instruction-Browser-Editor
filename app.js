@@ -334,6 +334,13 @@ function injectInteraction(html) {
       will-change: left, top, width, height;
       opacity: 1;
     }
+    .vibeditor-selected-box.is-deselect {
+      border-color: rgba(255, 110, 70, 0.95);
+      box-shadow:
+        0 0 0 2px rgba(255, 110, 70, 0.18),
+        0 0 26px rgba(255, 110, 70, 0.34),
+        0 0 56px rgba(255, 110, 70, 0.20);
+    }
     .vibeditor-selected-label {
       position: fixed;
       left: 0;
@@ -345,12 +352,15 @@ function injectInteraction(html) {
       font-weight: 700;
       letter-spacing: 0.02em;
       color: rgba(255, 255, 255, 0.96);
-      background: linear-gradient(135deg, rgba(73, 214, 255, 0.92), rgba(124, 92, 255, 0.92));
+      background: rgba(73, 214, 255, 0.92);
       box-shadow:
         0 10px 24px rgba(0, 0, 0, 0.22),
         0 0 18px rgba(73, 214, 255, 0.22);
       transform: translateZ(0);
       opacity: 1;
+    }
+    .vibeditor-selected-label.is-deselect {
+      background: rgba(255, 110, 70, 0.92);
     }
     @media (prefers-reduced-motion: reduce) {
       .vibeditor-hover-overlay { transition: none; }
@@ -377,6 +387,7 @@ function injectInteraction(html) {
       let pendingHoverFrame = null;
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let pendingLayoutFrame = null;
+      let hoverSelectedLabel = null;
 
       const notifyParent = () => {
         const targets = selection.map((item) => {
@@ -454,6 +465,27 @@ function injectInteraction(html) {
         });
       };
 
+      const setHoverSelectedLabel = (label) => {
+        if (hoverSelectedLabel === label) return;
+        if (hoverSelectedLabel) {
+          const prev = selectionOverlays.get(hoverSelectedLabel);
+          prev?.box?.classList.remove('is-deselect');
+          prev?.labelEl?.classList.remove('is-deselect');
+        }
+        hoverSelectedLabel = label;
+        const next = selectionOverlays.get(label);
+        next?.box?.classList.add('is-deselect');
+        next?.labelEl?.classList.add('is-deselect');
+      };
+
+      const clearHoverSelectedLabel = () => {
+        if (!hoverSelectedLabel) return;
+        const entry = selectionOverlays.get(hoverSelectedLabel);
+        entry?.box?.classList.remove('is-deselect');
+        entry?.labelEl?.classList.remove('is-deselect');
+        hoverSelectedLabel = null;
+      };
+
       const selectElement = (element) => {
         const label = labels[labelIndex] || String(labelIndex + 1);
         labelIndex += 1;
@@ -505,10 +537,15 @@ function injectInteraction(html) {
         const target = event.target.closest('body *');
         if (!target) return;
         if (target === hoverOverlay) return;
+        // Selection-first: only show "deselect" (amber) when the hovered element itself is selected.
+        // If a child element is under the cursor, prioritize showing the normal hover overlay for it.
         if (target.hasAttribute('data-vibeditor-id')) {
+          const label = target.getAttribute('data-vibeditor-id');
+          if (label) setHoverSelectedLabel(label);
           clearHover();
           return;
         }
+        clearHoverSelectedLabel();
         const rect = target.getBoundingClientRect();
         if (pendingHoverFrame) cancelAnimationFrame(pendingHoverFrame);
         pendingHoverFrame = requestAnimationFrame(() => {
@@ -525,6 +562,7 @@ function injectInteraction(html) {
         if (!supportsHover) return;
         if (mode !== 'select') return;
         clearHover();
+        clearHoverSelectedLabel();
       };
 
       const onClick = (event) => {
@@ -587,6 +625,62 @@ function updateCommandBar() {
   renderSelectionStrip();
 }
 
+// When nothing is selected, focusing the input means "apply to the whole page".
+// Visually emphasize only in that case (don't emphasize when focusing buttons like mode toggle).
+instructionInput.addEventListener("focus", () => {
+  const hasSelection = Boolean(state.selection && state.selection.targets.length > 0);
+  if (!hasSelection) commandBar.classList.add("engaged");
+});
+
+instructionInput.addEventListener("blur", () => {
+  const hasSelection = Boolean(state.selection && state.selection.targets.length > 0);
+  if (!hasSelection) commandBar.classList.remove("engaged");
+});
+
+// iOS: Prevent scroll chaining (textarea scroll gesture scrolling the page and dismissing the keyboard).
+// Keep textarea scrollable, but prevent the document from scrolling when interacting with the command bar.
+(() => {
+  const textarea = instructionInput;
+  if (!textarea) return;
+  if (!("ontouchstart" in window)) return;
+  if (!commandBar) return;
+
+  const isScrollable = () => textarea.scrollHeight > textarea.clientHeight + 1;
+  const bumpFromEdges = () => {
+    if (!isScrollable()) return;
+    if (textarea.scrollTop <= 0) textarea.scrollTop = 1;
+    const maxScrollTop = textarea.scrollHeight - textarea.clientHeight;
+    if (textarea.scrollTop >= maxScrollTop) textarea.scrollTop = Math.max(0, maxScrollTop - 1);
+  };
+
+  // Ensure we never sit exactly on the edge, otherwise the page can start scrolling.
+  bumpFromEdges();
+
+  window.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!commandBar.contains(event.target)) return;
+      const isTextAreaTarget = event.target === textarea;
+      if (isTextAreaTarget && isScrollable()) {
+        const atTop = textarea.scrollTop <= 0;
+        const atBottom = textarea.scrollTop + textarea.clientHeight >= textarea.scrollHeight;
+        if (!atTop && !atBottom) {
+          // Allow textarea to scroll.
+          event.stopPropagation();
+          return;
+        }
+      }
+      // Otherwise prevent the page from scrolling.
+      event.preventDefault();
+    },
+    { passive: false },
+  );
+
+  textarea.addEventListener("scroll", () => {
+    bumpFromEdges();
+  });
+})();
+
 function updateModeToggleUI() {
   if (!modeToggleButton) return;
   const isSelect = state.previewMode !== "interact";
@@ -614,7 +708,7 @@ function renderSelectionStrip() {
   targets.forEach((target) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "selection-pill";
+    button.className = "selection-pill icon ghost";
     button.textContent = target.label;
     button.setAttribute("aria-label", `${target.label} にスクロール`);
     button.addEventListener("click", () => {
@@ -982,13 +1076,16 @@ if (forwardButton) {
     const vh = window.innerHeight;
     const margin = 8;
     const bottomPx = parseFloat(getComputedStyle(commandBar).bottom) || 0;
-    const baseLeft = vw / 2 - rect.width / 2;
-    const baseTop = vh - bottomPx - rect.height;
+    // Use layout sizes (untransformed) so scaling (e.g. idle --cmd-scale) doesn't create "wiggle room".
+    const layoutWidth = commandBar.offsetWidth || rect.width;
+    const layoutHeight = commandBar.offsetHeight || rect.height;
+    const baseLeft = vw / 2 - layoutWidth / 2;
+    const baseTop = vh - bottomPx - layoutHeight;
 
     const minX = margin - baseLeft;
-    const maxX = vw - margin - rect.width - baseLeft;
+    const maxX = vw - margin - layoutWidth - baseLeft;
     const minY = margin - baseTop;
-    const maxY = vh - margin - rect.height - baseTop;
+    const maxY = vh - margin - layoutHeight - baseTop;
 
     return {
       x: Math.min(Math.max(x, minX), maxX),
@@ -1026,7 +1123,7 @@ if (forwardButton) {
   );
 
   commandBar.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     const { x: originX, y: originY } = currentOffset();
     drag = {
       pointerId: event.pointerId,
@@ -1050,9 +1147,7 @@ if (forwardButton) {
       commandBar.classList.add("dragging");
       commandBar.setPointerCapture(event.pointerId);
 
-      if (document.activeElement && commandBar.contains(document.activeElement)) {
-        document.activeElement.blur?.();
-      }
+      // Keep focus (especially on mobile) to avoid unexpectedly dismissing the keyboard while trying to scroll/edit.
     }
 
     const nextX = drag.originX + dx;
@@ -1080,6 +1175,76 @@ if (forwardButton) {
     const clamped = clampOffset(x, y);
     setOffset(clamped.x, clamped.y);
   });
+
+  // iOS Safari: Use touch events to reliably prevent page scrolling while dragging.
+  // Only start touch-drag from non-input areas so textarea scroll/selection can still work.
+  let touchDrag = null;
+
+  const findTouch = (event, identifier) => {
+    const touches = event.touches || [];
+    for (let i = 0; i < touches.length; i += 1) {
+      if (touches[i].identifier === identifier) return touches[i];
+    }
+    return null;
+  };
+
+  commandBar.addEventListener(
+    "touchstart",
+    (event) => {
+      if (event.touches.length !== 1) return;
+      const target = event.target;
+      if (target && target.closest && target.closest("#instruction-input")) return;
+      const touch = event.touches[0];
+      const { x: originX, y: originY } = currentOffset();
+      touchDrag = {
+        identifier: touch.identifier,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        originX,
+        originY,
+        isDragging: false,
+      };
+    },
+    { passive: true },
+  );
+
+  commandBar.addEventListener(
+    "touchmove",
+    (event) => {
+      if (!touchDrag) return;
+      const touch = findTouch(event, touchDrag.identifier);
+      if (!touch) return;
+
+      const dx = touch.clientX - touchDrag.startX;
+      const dy = touch.clientY - touchDrag.startY;
+
+      if (!touchDrag.isDragging) {
+        if (Math.hypot(dx, dy) < dragThresholdPx) return;
+        touchDrag.isDragging = true;
+        commandBar.classList.add("dragging");
+      }
+
+      // IMPORTANT: prevent page scroll while dragging.
+      event.preventDefault();
+
+      const nextX = touchDrag.originX + dx;
+      const nextY = touchDrag.originY + dy;
+      const clamped = clampOffset(nextX, nextY);
+      setOffset(clamped.x, clamped.y);
+    },
+    { passive: false },
+  );
+
+  const endTouchDrag = () => {
+    if (!touchDrag) return;
+    const wasDragging = touchDrag.isDragging;
+    touchDrag = null;
+    commandBar.classList.remove("dragging");
+    if (wasDragging) suppressNextClick = true;
+  };
+
+  commandBar.addEventListener("touchend", endTouchDrag, { passive: true });
+  commandBar.addEventListener("touchcancel", endTouchDrag, { passive: true });
 })();
 
 window.addEventListener("message", (event) => {

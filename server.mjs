@@ -1,5 +1,6 @@
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GoogleGenAI } from "@google/genai";
@@ -8,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const port = Number(process.env.PORT || 8787);
+const host = process.env.HOST || "0.0.0.0";
 const apiKey = process.env.GEMINI_API_KEY;
 const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
@@ -205,9 +207,26 @@ const server = http.createServer(async (req, res) => {
   text(res, 405, "Method not allowed");
 });
 
-server.listen(port, () => {
+const getLanIPv4s = () => {
+  const nets = os.networkInterfaces();
+  return Object.values(nets)
+    .flatMap((entries) => entries || [])
+    .filter((entry) => entry && entry.family === "IPv4" && !entry.internal && entry.address)
+    .map((entry) => entry.address);
+};
+
+server.listen(port, host, () => {
   // eslint-disable-next-line no-console
   console.log(`VIBE server listening on http://localhost:${port}`);
+  const addrs = getLanIPv4s();
+  if (addrs.length) {
+    // eslint-disable-next-line no-console
+    console.log("LANからは次のURLでアクセスできます:");
+    addrs.forEach((addr) => {
+      // eslint-disable-next-line no-console
+      console.log(`  http://${addr}:${port}`);
+    });
+  }
   if (!apiKey) {
     // eslint-disable-next-line no-console
     console.log("GEMINI_API_KEY が未設定です。/api/llm は 500 を返します。");
